@@ -17,7 +17,7 @@ import java.awt.event.KeyListener;
 
 public class Link {
     private Character character1, character2;
-    private final int maxDistance = 100;
+    private final int maxDistance = 110;
 
     public Link(Character c1, Character c2) {
         this.character1 = c1;
