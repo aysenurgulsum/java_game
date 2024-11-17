@@ -14,7 +14,7 @@ import java.awt.event.KeyEvent;
 class Character {
     private int x, y, speed, yVelocity;
     private boolean up, down, left, right, onGround;
-    private final int width = 50, height = 50;
+    private final int width = 60, height = 60;
     private final Color color;
 
     public Character(int startX, int startY, Color color) {
