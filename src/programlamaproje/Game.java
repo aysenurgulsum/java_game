@@ -14,18 +14,33 @@ import javax.swing.JPanel;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import javax.swing.*;
 import java.awt.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Game extends JPanel implements KeyListener {
     private final Character character1, character2;
     private final int maxLinkDistance = 200;
+    private final ScheduledExecutorService executorService;
+    private List<Block> blocks;
     
     public Game() {
         character1 = new Character(100, 480, Color.MAGENTA);
         character2 = new Character(200, 480, Color.PINK);
+        
+        blocks = new ArrayList<>();
+        blocks.add(new Block(700, 500, 150, 20,Color.BLUE, 10));
+        
+        blocks.add(new Block(100, 400, 150, 20, Color.BLUE, 30));
+        blocks.add(new Block(1400, 400, 150, 20, Color.BLUE, 30));
+        
+        blocks.add(new Block(400, 425, 150, 20, Color.BLUE, 20));
+        blocks.add(new Block(1100, 425, 150, 20, Color.BLUE, 20));
 
-        JFrame frame = new JFrame("2D Yarış Oyunu");
+        JFrame frame = new JFrame("Java Proje");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setExtendedState(JFrame.MAXIMIZED_BOTH); // Tam ekran yap
         frame.setUndecorated(false); // Kenarları kaldır
@@ -36,15 +51,21 @@ public class Game extends JPanel implements KeyListener {
         frame.setFocusable(true);
         frame.requestFocusInWindow();
         
-        
-        Timer timer = new Timer(16, e -> {
-            character1.update(getWidth(), getHeight());
-            character2.update(getWidth(), getHeight());
-            checkLinkDistance();
-            repaint();
-        });
-        timer.start();
+        executorService = Executors.newScheduledThreadPool(1);
+        executorService.scheduleAtFixedRate(this::gameLoop, 0, 16, TimeUnit.MILLISECONDS);
+       
     }
+    private void gameLoop() {
+        character1.update(getWidth(), getHeight(), blocks);
+        character2.update(getWidth(), getHeight(), blocks);
+        checkLinkDistance();
+        repaint();
+    }    
+
+
+    public void stop() {
+        executorService.shutdown(); // Oyun kapatıldığında iş parçacığını durdur
+    }    
 
     // Karakterler arasındaki mesafeyi kontrol et
     private void checkLinkDistance() {
@@ -72,6 +93,16 @@ public class Game extends JPanel implements KeyListener {
         g.setColor(Color.BLACK);
         g.drawLine(character1.getX() + 10, character1.getY() + 10,
                    character2.getX() + 10, character2.getY() + 10);
+        
+        // Blokları çiz
+        for (Block block : blocks) {
+            block.render(g);
+        }
+        
+        // Toplam puanı çiz
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Arial", Font.BOLD, 24));
+        g.drawString("Score: " + (character1.getScore() + character2.getScore()), 20, 40);
     }
 
     @Override
