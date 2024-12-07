@@ -96,8 +96,10 @@ class Character {
             onGround = true;
             
             // Puanı topla ve blok "toplandı" olarak işaretle
-            score += block.getPoints();
-            block.setCollected(true);
+            if (!block.isCollected()) {
+                score += block.getPoints(); // Puan ekle
+                block.setCollected(true);   // Bloğu "toplandı" olarak işaretle
+            }
         }
         }
     }
