@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class StartScreen extends JFrame {
+
     private JButton startButton; // Oyunu başlat butonu
     private JTextArea scoreArea; // Geçmiş puanların listeleneceği alan
     private DatabaseManager dbManager; // Veritabanı bağlantısı için
@@ -42,6 +43,7 @@ public class StartScreen extends JFrame {
                 Game gameFrame = new Game();
                 gameFrame.setVisible(true);
                 dispose();
+                
             }
         });
 
@@ -49,7 +51,8 @@ public class StartScreen extends JFrame {
         scoreArea = new JTextArea();
         scoreArea.setEditable(false);
         scoreArea.setFont(new Font("Monospaced", Font.PLAIN, 16));
-
+        // JScrollPane ile sar (scroll özelliği eklemek için)
+        JScrollPane scrollPane = new JScrollPane(scoreArea);
         // Veritabanından skorları getir
         List<String> scores = dbManager.getAllScores();
         scoreArea.setText("Geçmiş Skorlar:\n");

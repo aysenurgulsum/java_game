@@ -21,6 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.sql.*;
 import javax.swing.SwingUtilities;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.concurrent.CompletableFuture;
 
 public class Game extends JPanel implements KeyListener {
 
@@ -29,6 +32,7 @@ public class Game extends JPanel implements KeyListener {
     private final ScheduledExecutorService executorService;
     private List<Block> blocks;
     private DatabaseManager dbManager;
+    private int score;
 
     public Game() {
 
@@ -55,7 +59,7 @@ public class Game extends JPanel implements KeyListener {
         blocks.add(new Block(700, 125, 150, 20, Color.BLUE, 50));
 
         JFrame frame = new JFrame("Java Proje");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); // Kapatma işlemini özelleştir
         frame.setExtendedState(JFrame.MAXIMIZED_BOTH); // Tam ekran yap
         frame.setUndecorated(false); // Kenarları kaldır
         frame.add(this);
@@ -65,66 +69,47 @@ public class Game extends JPanel implements KeyListener {
         frame.setFocusable(true);
         frame.requestFocusInWindow();
 
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                stop(); // Pencere kapatılmadan önce stop() fonksiyonunu çağır
+            }
+        });
+
         executorService = Executors.newScheduledThreadPool(1);
         executorService.scheduleAtFixedRate(this::gameLoop, 0, 16, TimeUnit.MILLISECONDS);
+        
 
     }
-
-    // veritbanına bağlan
-    /*private Connection connectToDatabase() {
-        try {
-            return DriverManager.getConnection("jdbc:sqlite:game_scores.db");
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-    
-    // Puanı kaydet
-    public void saveScoreToDatabase(int score) {
-        try (Connection connection = connectToDatabase()) {
-            if (connection != null) {
-                String sql = "INSERT INTO scores (score) VALUES (?)";
-                try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                    pstmt.setInt(1, score);
-                    pstmt.executeUpdate();
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }*/
     // Oyunun sonunda veritabanına kaydet
     private void endGame() {
-        System.out.println("endGame metodu çağrıldı.");
+        System.out.println("Oyun sona erdi. Skorlar kaydediliyor...");
 
-        // Oyuncunun skorunu kaydet
-        System.out.println("Character 1 Skoru: " + character1.getScore());
-        System.out.println("Character 2 Skoru: " + character2.getScore());
-
-        dbManager.saveScore(character1.getScore());
-        dbManager.saveScore(character2.getScore());
-
-        System.out.println("Skor kaydedildi mi?");
-
+        // Oyuncu skorlarını kaydet
+        dbManager.saveScore(character1.getScore(), character2.getScore());
+        System.out.println("Character 1 Score: " + character1.getScore());
+        System.out.println("Character 2 Score: " + character2.getScore());
         // Başlangıç ekranına dön
         StartScreen startScreen = new StartScreen();
         startScreen.setVisible(true);
-        dispose();
     }
 
     private void gameLoop() {
         character1.update(getWidth(), getHeight(), blocks);
         character2.update(getWidth(), getHeight(), blocks);
         checkLinkDistance();
-        System.out.println("Character 1 Score: " + character1.getScore());
-        System.out.println("Character 2 Score: " + character2.getScore());
+        //System.out.println("Character 1 Score: " + character1.getScore());
+        //System.out.println("Character 2 Score: " + character2.getScore());
         repaint();
     }
 
     public void stop() {
-        executorService.shutdown(); // Oyun kapatıldığında iş parçacığını durdur
-        endGame(); // Puanı kaydet
+        endGame(); // Skorları kaydet ve oyunu sonlandır
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
+        dispose(); // Pencereyi kapat
+        System.exit(0);
     }
 
     // Karakterler arasındaki mesafeyi kontrol et
@@ -169,14 +154,14 @@ public class Game extends JPanel implements KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        character1.keyPressed(e, "Character1");
-        character2.keyPressed(e, "Character2");
+        CompletableFuture.runAsync(() -> character1.keyPressed(e, "Character1"));
+        CompletableFuture.runAsync(() -> character2.keyPressed(e, "Character2"));
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-        character1.keyReleased(e, "Character1");
-        character2.keyReleased(e, "Character2");
+        CompletableFuture.runAsync(() -> character1.keyReleased(e, "Character1"));
+        CompletableFuture.runAsync(() -> character2.keyReleased(e, "Character2"));
     }
 
     @Override
@@ -188,6 +173,31 @@ public class Game extends JPanel implements KeyListener {
         if (topFrame != null) {
             topFrame.dispose();
         }
+    }
+
+    private Connection connectToDatabase() {
+        try {
+            return DriverManager.getConnection("jdbc:sqlite:game_scores.db");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public void saveScoreToDatabase(int score) {
+        CompletableFuture.runAsync(() -> {
+            try (Connection connection = connectToDatabase()) {
+                if (connection != null) {
+                    String sql = "INSERT INTO scores (score) VALUES (?)";
+                    try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                        pstmt.setInt(1, score);
+                        pstmt.executeUpdate();
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
 }
